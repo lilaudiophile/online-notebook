@@ -29,7 +29,7 @@ exports.getEditProfileForm = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.render('editProfile', { user }); // Предполагается, что у вас есть шаблон editProfile.ejs или другой подходящий
+    res.render('editProfile', { user, csrfToken: req.csrfToken() }); // Предполагается, что у вас есть шаблон editProfile.ejs или другой подходящий
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });
   }
