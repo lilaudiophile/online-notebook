@@ -2,11 +2,6 @@ const User = require('../models/user');
 
 // Контроллер для обработки данных формы регистрации
 exports.registerUser = async (req, res) => {
-  const csrfToken = req.csrfToken(); // Получаем CSRF токен
-  if (!req.body._csrf || req.body._csrf !== csrfToken) {
-    return res.status(403).json({ error: 'Invalid CSRF token' });
-  }
-
   const { username, email, password } = req.body;
   try {
     // Проверка наличия пользователя с таким же email в базе данных
@@ -25,7 +20,5 @@ exports.registerUser = async (req, res) => {
 
 // Функция для отображения страницы регистрации
 exports.getRegisterPage = (req, res) => {
-  // Здесь ваша логика для обработки GET запроса страницы регистрации
-  // Например:
-  res.render('register'); // Предполагается, что у вас есть шаблонизатор, такой как EJS или Pug
+  res.render('register', { csrfToken: req.csrfToken() });
 };
