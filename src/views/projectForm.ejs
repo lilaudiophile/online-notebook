@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title><%= project ? 'Edit Project' : 'Create Project' %></title>
+</head>
+<body>
+    <h1><%= project ? 'Edit Project' : 'Create Project' %></h1>
+    <form action="<%= project ? '/projects/' + project._id : '/projects' %>" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <% if (project) { %>
+            <input type="hidden" name="_method" value="PUT">
+        <% } %>
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" value="<%= project ? project.name : '' %>" required>
+        <label for="description">Description:</label>
+        <textarea id="description" name="description" required><%= project ? project.description : '' %></textarea>
+        <button type="submit"><%= project ? 'Update Project' : 'Create Project' %></button>
+    </form>
+</body>
+</html>

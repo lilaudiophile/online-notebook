@@ -1,111 +1,99 @@
-// app.js
+require('dotenv').config(); // Load environment variables
 
-// Подключение необходимых модулей
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const bodyParser = require('body-parser');
-const session = require('express-session');
-const passport = require('passport');
-const expressValidator = require('express-validator');
 const path = require('path');
 const csrf = require('csurf');
 const cookieParser = require('cookie-parser');
 
-// Импорт контроллеров
-const authController = require('./src/controllers/authController');
-const profileController = require('./src/controllers/profileController');
-const projectController = require('./src/controllers/projectController');
-const taskController = require('./src/controllers/taskController');
-const userController = require('./src/controllers/userController');
-
-
-// Создание экземпляра приложения Express
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Устанавливаем путь к директории с представлениями
-app.set('views', path.join(__dirname, 'src', 'views'));
-
-// Use cookie parser middleware
-app.use(cookieParser());
-
-// Устанавливаем EJS как шаблонизатор
-app.set('view engine', 'ejs');
-
-// Указываем путь к модели пользователя
-const User = require('./src/models/user');
-
-// Подключение к базе данных MongoDB
-mongoose.connect('mongodb://localhost/online_notebook', { useNewUrlParser: true, useUnifiedTopology: true });
-mongoose.connection.once('open', () => {
-  console.log('Connected to MongoDB');
-});
-
 // Middleware
+app.use(cookieParser());
 app.use(cors());
 app.use(helmet());
 app.use(morgan('combined'));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true })); // Используем body-parser для обработки данных формы
-// Это позволит Express обрабатывать данные формы, отправленные методом POST, также как и JSON данные.
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Использование express-validator как объект
-const { body, validationResult } = require('express-validator');
-app.use(
-  expressValidator({
-    customValidators: {
-      // Ваши пользовательские валидаторы, если есть
-    }
-  })
-);
-
-
-
-// Set up CSRF protection middleware
+// CSRF protection middleware
 const csrfProtection = csrf({ cookie: true });
-
-// Apply CSRF protection middleware to routes that need it
 app.use(csrfProtection);
 
-// Routes
-// Подключаем маршруты
+// Set view engine
+app.set('views', path.join(__dirname, 'src', 'views'));
+app.set('view engine', 'ejs');
 
-const authRoutes = require('./src/routes/authRoutes');
-const profileRoutes = require('./src/routes/profileRoutes');
-const projectRoutes = require('./src/routes/projectRoutes');
-const taskRoutes = require('./src/routes/taskRoutes');
-
-// Используем подключенные маршруты
-app.use('/', authRoutes);
-app.use('/', profileRoutes);
-app.use('/', projectRoutes);
-app.use('/', taskRoutes);
-
-
-app.get('/register', csrfProtection, authController.getRegisterPage);
-app.post('/register', authController.registerUser);
-
-app.get('/profile/:userId', csrfProtection, profileController.getUserProfile);
-app.post('/profile/:userId', profileController.updateUserProfile);
-
-// Тестовый маршрут
-app.get('/', (req, res) => {
-  res.send('Hello, this is your backend server!');
+// MongoDB connection
+mongoose.connect('mongodb://localhost/online_notebook');
+mongoose.connection.once('open', () => {
+  console.log('Connected to MongoDB');
 });
 
-// Обработка ошибок CSRF
+// Import controllers
+const userController = require('./src/controllers/userController');
+const taskController = require('./src/controllers/taskController');
+const projectController = require('./src/controllers/projectController');
+const commentController = require('./src/controllers/commentController');
+
+// Import middleware
+const authMiddleware = require('./src/middleware/authMiddleware');
+
+
+
+
+// Import routers
+const userRoutes = require('./src/routes/userRoutes');
+const taskRoutes = require('./src/routes/taskRoutes');
+const projectRoutes = require('./src/routes/projectRoutes');
+const commentRoutes = require('./src/routes/commentRoutes');
+
+// Use routers
+app.use('/user', userRoutes);
+app.use('/task', taskRoutes);
+app.use('/project', projectRoutes);
+app.use('/comment', commentRoutes);
+
+// Root route
+app.get('/', (req, res) => {
+  res.render('index');
+});
+
+app.use(authMiddleware);
+
+// User routes
+app.get('/register', csrfProtection, userController.showRegisterForm);
+app.post('/register', csrfProtection, userController.register);
+app.get('/login', csrfProtection, userController.showLoginForm);
+app.post('/login', csrfProtection, userController.login);
+app.get('/me', authMiddleware, userController.getUser);
+app.get('/main', authMiddleware, userController.showMainPage);
+
+// Project routes
+app.get('/projects', authMiddleware, projectController.getProjects);
+app.post('/projects', authMiddleware, csrfProtection, projectController.createProject);
+app.get('/projects/new', authMiddleware, csrfProtection, projectController.showCreateProjectForm);
+app.get('/projects/:id', authMiddleware, projectController.getProject);
+app.get('/projects/:id/edit', authMiddleware, csrfProtection, projectController.showEditProjectForm);
+app.post('/projects/:id', authMiddleware, csrfProtection, projectController.updateProject);
+app.delete('/projects/:id', authMiddleware, csrfProtection, projectController.deleteProject);
+
+// Error handling
 app.use((err, req, res, next) => {
   if (err.code === 'EBADCSRFTOKEN') {
+    console.error('Invalid CSRF token:', err);
     res.status(403).json({ error: 'Invalid CSRF token' });
   } else {
     next(err);
   }
 });
 
-// Server
+// Start server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

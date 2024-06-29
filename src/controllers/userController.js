@@ -1,72 +1,101 @@
-// src/controllers/userController.js
+const mongoose = require('mongoose');
+const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { validationResult } = require('express-validator');
+const Project = require('../models/Project'); // Assuming you have a Board model
 
-const User = require('../models/user');
+// Регистрация пользователя
+exports.register = async (req, res) => {
+    const { username, email, password } = req.body;
 
-// Контроллер для получения списка всех пользователей
-exports.getAllUsers = async (req, res) => {
-  try {
-    const users = await User.find();
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
+    try {
+        let user = await User.findOne({ email });
+        if (user) {
+            return res.status(400).json({ msg: 'User already exists' });
+        }
 
-// Контроллер для получения информации о конкретном пользователе
-exports.getUserById = async (req, res) => {
-  const { userId } = req.params;
-  try {
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+        user = new User({ username, email, password });
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(password, salt);
+        await user.save();
+
+        const payload = { user: { id: user.id } };
+        jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
+            if (err) throw err;
+            res.cookie('token', token, { httpOnly: true });
+            res.redirect('/main');
+        });
+    } catch (err) {
+        console.error('Server error:', err.message);
+        res.status(500).send('Server error');
     }
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
 };
 
-// Контроллер для создания нового пользователя
-exports.createUser = async (req, res) => {
-  const { username, email, password } = req.body;
-  try {
-    const newUser = new User({ username, email, password });
-    const savedUser = await newUser.save();
-    res.status(201).json(savedUser);
-  } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-};
 
-// Контроллер для обновления информации о пользователе
-exports.updateUser = async (req, res) => {
-  const { userId } = req.params;
-  const { username, email, password } = req.body;
-  try {
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { username, email, password },
-      { new: true }
-    );
-    if (!updatedUser) {
-      return res.status(404).json({ error: 'User not found' });
+
+// Аутентификация пользователя
+exports.login = async (req, res) => {
+    const { email, password } = req.body;
+    try {
+        let user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ msg: 'Invalid Credentials' });
+        }
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ msg: 'Invalid Credentials' });
+        }
+        const payload = { user: { id: user.id } };
+        jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
+            if (err) throw err;
+            res.cookie('token', token, { httpOnly: true });
+            res.redirect('/main');
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
     }
-    res.json(updatedUser);
-  } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
 };
 
-// Контроллер для удаления пользователя
-exports.deleteUser = async (req, res) => {
-  const { userId } = req.params;
-  try {
-    const deletedUser = await User.findByIdAndDelete(userId);
-    if (!deletedUser) {
-      return res.status(404).json({ error: 'User not found' });
+
+// Получение информации о пользователе
+exports.getUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('-password');
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        res.render('profile', { user });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
     }
-    res.json(deletedUser);
-  } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
+};
+
+// Показ формы регистрации
+exports.showRegisterForm = (req, res) => {
+    res.render('register', { csrfToken: req.csrfToken() });
+};
+
+// Показ формы логина
+exports.showLoginForm = (req, res) => {
+    res.render('login', { csrfToken: req.csrfToken() });
+};
+
+// Показ основной страницы
+exports.showMainPage = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).send('User not found');
+        }
+
+        const projects = await Project.find({ user: req.user.id });
+
+        res.render('main', { user, projects, token: req.cookies.token });
+    } catch (error) {
+        console.error('Error fetching user or projects:', error.message);
+        res.status(500).send('Server error');
+    }
 };

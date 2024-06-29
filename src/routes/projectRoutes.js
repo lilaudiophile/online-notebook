@@ -1,20 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const projectController = require('../controllers/projectController');
+const authMiddleware = require('../middleware/authMiddleware');
 
-// Исправленный маршрут для получения списка всех проектов
-router.get('/projects', projectController.getAllProjects);
-
-// Исправленный маршрут для получения информации о конкретном проекте
-router.get('/projects/:projectId', projectController.getProjectById);
-
-// Исправленный маршрут для создания нового проекта
-router.post('/projects', projectController.createProject);
-
-// Исправленный маршрут для обновления информации о проекте
-router.put('/projects/:projectId', projectController.updateProject);
-
-// Исправленный маршрут для удаления проекта
-router.delete('/projects/:projectId', projectController.deleteProject);
+router.get('/', authMiddleware, projectController.getProjects);
+router.get('/create', authMiddleware, projectController.showCreateProjectForm);
+router.post('/create', authMiddleware, projectController.createProject);
+router.get('/:id', authMiddleware, projectController.getProject);
+router.get('/:id/edit', authMiddleware, projectController.showEditProjectForm);
+router.post('/:id/edit', authMiddleware, projectController.updateProject);
+router.delete('/:id', authMiddleware, projectController.deleteProject);
 
 module.exports = router;

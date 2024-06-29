@@ -29,6 +29,9 @@ const userSchema = new mongoose.Schema({
   }
 });
 
+// Проверяем, была ли модель уже зарегистрирована, если нет - регистрируем
+module.exports = mongoose.models.User || mongoose.model('User', userSchema);
+
 // Метод для хеширования пароля перед сохранением
 userSchema.pre('save', async function(next) {
   if (this.isModified('password') || this.isNew) {

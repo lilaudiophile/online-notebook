@@ -1,72 +1,97 @@
-// src/controllers/projectController.js
-
 const Project = require('../models/Project');
 
-// Контроллер для получения списка всех проектов
-exports.getAllProjects = async (req, res) => {
-  try {
-    const projects = await Project.find();
-    res.json(projects);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to retrieve projects' });
-  }
-};
-
-// Контроллер для получения информации о конкретном проекте
-exports.getProjectById = async (req, res) => {
-  const { projectId } = req.params;
-  try {
-    const project = await Project.findById(projectId);
-    if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
+// Получение всех проектов
+exports.getProjects = async (req, res) => {
+    try {
+        const projects = await Project.find({ createdBy: req.user.id });
+        res.render('projects', { projects });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
     }
-    res.json(project);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to retrieve project details' });
-  }
 };
 
-// Контроллер для создания нового проекта
+// Создание нового проекта
 exports.createProject = async (req, res) => {
-  const { name, description } = req.body;
-  try {
-    const newProject = new Project({ name, description });
-    const savedProject = await newProject.save();
-    res.status(201).json(savedProject);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create project' });
-  }
+    const { name, description } = req.body;
+    try {
+        const newProject = new Project({
+            name,
+            description,
+            createdBy: req.user.id
+        });
+        const project = await newProject.save();
+        res.render('projectDetail', { project });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
 };
 
-// Контроллер для обновления информации о проекте
+// Получение проекта по ID
+exports.getProject = async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id);
+        if (!project) {
+            return res.status(404).json({ msg: 'Project not found' });
+        }
+        res.render('projectDetail', { project });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+};
+
+// Обновление проекта
 exports.updateProject = async (req, res) => {
-  const { projectId } = req.params;
-  const { name, description } = req.body;
-  try {
-    const updatedProject = await Project.findByIdAndUpdate(
-      projectId,
-      { name, description },
-      { new: true }
-    );
-    if (!updatedProject) {
-      return res.status(404).json({ error: 'Project not found' });
+    const { name, description } = req.body;
+    try {
+        let project = await Project.findById(req.params.id);
+        if (!project) {
+            return res.status(404).json({ msg: 'Project not found' });
+        }
+        project = await Project.findByIdAndUpdate(
+            req.params.id,
+            { name, description },
+            { new: true }
+        );
+        res.render('projectDetail', { project });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
     }
-    res.json(updatedProject);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update project' });
-  }
 };
 
-// Контроллер для удаления проекта
+// Удаление проекта
 exports.deleteProject = async (req, res) => {
-  const { projectId } = req.params;
-  try {
-    const deletedProject = await Project.findByIdAndDelete(projectId);
-    if (!deletedProject) {
-      return res.status(404).json({ error: 'Project not found' });
+    try {
+        let project = await Project.findById(req.params.id);
+        if (!project) {
+            return res.status(404).json({ msg: 'Project not found' });
+        }
+        await Project.findByIdAndRemove(req.params.id);
+        res.json({ msg: 'Project removed' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
     }
-    res.json(deletedProject);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete project' });
-  }
+};
+
+// Показ формы создания проекта
+exports.showCreateProjectForm = (req, res) => {
+    res.render('createProject');
+};
+
+// Показ формы редактирования проекта
+exports.showEditProjectForm = async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id);
+        if (!project) {
+            return res.status(404).json({ msg: 'Project not found' });
+        }
+        res.render('editProject', { project });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
 };

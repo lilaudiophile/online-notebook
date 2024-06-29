@@ -1,72 +1,100 @@
-// src/controllers/taskController.js
-
 const Task = require('../models/Task');
 
-// Контроллер для получения списка всех задач
-exports.getAllTasks = async (req, res) => {
-  try {
-    const tasks = await Task.find();
-    res.json(tasks);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to retrieve tasks' });
-  }
-};
-
-// Контроллер для получения информации о конкретной задаче
-exports.getTaskById = async (req, res) => {
-  const { taskId } = req.params;
-  try {
-    const task = await Task.findById(taskId);
-    if (!task) {
-      return res.status(404).json({ error: 'Task not found' });
+// Получение всех задач для пользователя
+exports.getTasks = async (req, res) => {
+    try {
+        const tasks = await Task.find({ assignedTo: req.user.id });
+        res.render('tasks', { tasks });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
     }
-    res.json(task);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to retrieve task details' });
-  }
 };
 
-// Контроллер для создания новой задачи
+// Создание новой задачи
 exports.createTask = async (req, res) => {
-  const { name, deadline, status, assignee, project } = req.body;
-  try {
-    const newTask = new Task({ name, deadline, status, assignee, project });
-    const savedTask = await newTask.save();
-    res.status(201).json(savedTask);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create task' });
-  }
+    const { title, description, deadline, priority } = req.body;
+    try {
+        const newTask = new Task({
+            title,
+            description,
+            deadline,
+            priority,
+            assignedTo: req.user.id,
+            createdBy: req.user.id
+        });
+        const task = await newTask.save();
+        res.render('taskDetail', { task });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
 };
 
-// Контроллер для обновления информации о задаче
+// Получение задачи по ID
+exports.getTask = async (req, res) => {
+    try {
+        const task = await Task.findById(req.params.id);
+        if (!task) {
+            return res.status(404).json({ msg: 'Task not found' });
+        }
+        res.render('taskDetail', { task });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+};
+
+// Обновление задачи
 exports.updateTask = async (req, res) => {
-  const { taskId } = req.params;
-  const { name, deadline, status, assignee, project } = req.body;
-  try {
-    const updatedTask = await Task.findByIdAndUpdate(
-      taskId,
-      { name, deadline, status, assignee, project },
-      { new: true }
-    );
-    if (!updatedTask) {
-      return res.status(404).json({ error: 'Task not found' });
+    const { title, description, deadline, priority, status } = req.body;
+    try {
+        let task = await Task.findById(req.params.id);
+        if (!task) {
+            return res.status(404).json({ msg: 'Task not found' });
+        }
+        task = await Task.findByIdAndUpdate(
+            req.params.id,
+            { title, description, deadline, priority, status },
+            { new: true }
+        );
+        res.render('taskDetail', { task });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
     }
-    res.json(updatedTask);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update task' });
-  }
 };
 
-// Контроллер для удаления задачи
+// Удаление задачи
 exports.deleteTask = async (req, res) => {
-  const { taskId } = req.params;
-  try {
-    const deletedTask = await Task.findByIdAndDelete(taskId);
-    if (!deletedTask) {
-      return res.status(404).json({ error: 'Task not found' });
+    try {
+        let task = await Task.findById(req.params.id);
+        if (!task) {
+            return res.status(404).json({ msg: 'Task not found' });
+        }
+        await Task.findByIdAndRemove(req.params.id);
+        res.json({ msg: 'Task removed' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
     }
-    res.json(deletedTask);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete task' });
-  }
+};
+
+// Показ формы создания задачи
+exports.showCreateTaskForm = (req, res) => {
+    res.render('createTask');
+};
+
+// Показ формы редактирования задачи
+exports.showEditTaskForm = async (req, res) => {
+    try {
+        const task = await Task.findById(req.params.id);
+        if (!task) {
+            return res.status(404).json({ msg: 'Task not found' });
+        }
+        res.render('editTask', { task });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
 };

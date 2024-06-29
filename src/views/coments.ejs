@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Comments</title>
+</head>
+<body>
+    <h1>Comments for <%= task.title %></h1>
+    <ul>
+        <% task.comments.forEach(function(comment) { %>
+            <li><%= comment.text %> - <%= comment.author %></li>
+        <% }) %>
+    </ul>
+    <form action="/tasks/<%= task._id %>/comments" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label for="comment">Add a comment:</label>
+        <textarea id="comment" name="comment" required></textarea>
+        <button type="submit">Add Comment</button>
+    </form>
+</body>
+</html>

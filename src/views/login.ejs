@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+</head>
+<body>
+    <h1>Login</h1>
+    <form id="loginForm" action="/login" method="post">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label for="email">Email:</label>
+        <input type="email" name="email" required>
+        <label for="password">Password:</label>
+        <input type="password" name="password" required>
+        <button type="submit">Login</button>
+    </form>
+
+    <script>
+        // Обработчик отправки формы логина
+        document.getElementById('loginForm').addEventListener('submit', function(event) {
+            const formData = new FormData(this);
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/login');
+            xhr.setRequestHeader('Content-Type', 'application/json'); // Убедитесь, что устанавливаете правильный Content-Type
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        console.log('Login successful');
+                        // Здесь можно выполнить дополнительные действия после успешного логина, если нужно
+                    } else {
+                        console.error('Login failed:', xhr.responseText);
+                    }
+                }
+            };
+            xhr.send(JSON.stringify({ email: formData.get('email'), password: formData.get('password') }));
+            event.preventDefault();
+        });
+    </script>
+</body>
+</html>
