@@ -5,11 +5,70 @@
 </head>
 <body>
     <h1>Welcome to Our Application</h1>
-    <form action="/login" method="get">
+    <!-- Форма для логина -->
+    <form id="loginForm" action="/login" method="post">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"> <!-- Вставляем CSRF-токен -->
         <button type="submit">Login</button>
     </form>
-    <form action="/register" method="get">
+    <!-- Форма для регистрации -->
+    <form id="registerForm" action="/register" method="post">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"> <!-- Вставляем CSRF-токен -->
         <button type="submit">Register</button>
     </form>
+
+    <script>
+        // Обработчик отправки формы логина
+        document.getElementById('loginForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Предотвращаем стандартное поведение отправки формы
+            const formData = {
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            };
+
+            // Отправка данных формы через XMLHttpRequest
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/login');
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        console.log('Login successful');
+                        // Можно выполнить дополнительные действия после успешного логина
+                        window.location.href = '/main'; // Перенаправление на главную страницу
+                    } else {
+                        console.error('Login failed:', xhr.responseText);
+                    }
+                }
+            };
+            xhr.send(JSON.stringify(formData));
+        });
+
+        // Обработчик отправки формы регистрации
+        document.getElementById('registerForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Предотвращаем стандартное поведение отправки формы
+            const formData = {
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            };
+
+            // Отправка данных формы через XMLHttpRequest
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/register');
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        console.log('Registration successful');
+                        // Можно выполнить дополнительные действия после успешной регистрации
+                        window.location.href = '/main'; // Перенаправление на главную страницу
+                    } else {
+                        console.error('Registration failed:', xhr.responseText);
+                    }
+                }
+            };
+            xhr.send(JSON.stringify(formData));
+        });
+    </script>
 </body>
 </html>

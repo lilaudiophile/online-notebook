@@ -6,52 +6,48 @@
 //Роль (Role): Строка, представляющая роль пользователя (обычный пользователь, менеджер, администратор и т.д.).
 
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  password: {
-    type: String,
-    required: true,
-  },
-  role: {
-    type: String,
-    default: 'user', // значение по умолчанию
-  }
+    username: {
+        type: String,
+        required: true,
+        unique: true,
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+    },
+    password: {
+        type: String,
+        required: true,
+    },
+    role: {
+        type: String,
+        default: 'user', // значение по умолчанию
+    }
 });
 
-// Проверяем, была ли модель уже зарегистрирована, если нет - регистрируем
-module.exports = mongoose.models.User || mongoose.model('User', userSchema);
-
-// Метод для хеширования пароля перед сохранением
+// Хэширование пароля перед сохранением
 userSchema.pre('save', async function(next) {
-  if (this.isModified('password') || this.isNew) {
-    try {
-      const salt = await bcrypt.genSalt(10);
-      this.password = await bcrypt.hash(this.password, salt);
-      next();
-    } catch (err) {
-      next(err);
+    if (this.isModified('password') || this.isNew) {
+        try {
+            const salt = await bcrypt.genSalt(10);
+            this.password = await bcrypt.hash(this.password, salt);
+            next();
+        } catch (err) {
+            next(err);
+        }
+    } else {
+        return next();
     }
-  } else {
-    return next();
-  }
 });
 
 // Метод для проверки пароля
 userSchema.methods.comparePassword = async function(password) {
-  return await bcrypt.compare(password, this.password);
+    return await bcrypt.compare(password, this.password);
 };
 
-const User = mongoose.model('User', userSchema);
-
-module.exports = User;
+// Проверяем, была ли модель уже зарегистрирована, если нет - регистрируем
+module.exports = mongoose.models.User || mongoose.model('User', userSchema);
